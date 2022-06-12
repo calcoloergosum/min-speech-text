@@ -1,0 +1,147 @@
+<html>
+  <head>
+    <style>
+    table, th, td {
+      border: 1px solid black;
+      border-collapse: collapse;
+    }
+    th {
+      text-align: right;
+      padding: 0.5em;
+      width: 5em;
+    }
+    table {
+      width: 100%;
+    }
+    input[type="text"] {
+      width: 100%;
+      -moz-box-sizing: border-box;
+      -webkit-box-sizing: border-box;
+      box-sizing: border-box;
+    }
+    </style>
+  </head>
+  <body>
+    <a href="/recordings">Show list</a><br>
+    <table>
+      <tr>
+        <th>TEXT</th>
+        <td><input type="text" id="text" value="" onkeyup="text_keyup(this)"/></td>
+      </tr>
+      <tr>
+        <th>SPEECH</th>
+        <td>
+          <input type="file" id="file" title="Upload File" onchange="handleFiles(this)"/>
+          <button id="player_rec_button">start</button><br>
+          <audio id="player_rec" controls></audio>
+        </td>
+      </tr>
+    </table>
+    <button id="upload" disabled=true>upload</button>
+    <script>
+        function text_keyup(elem) {
+          var uploadButton = document.getElementById('upload');
+          if (elem.value !== '' && document.getElementById("player_rec").src !== '') {
+            uploadButton.disabled = false;
+          } else {
+            uploadButton.disabled = true;
+          }
+          if(event.key === 'Enter') {
+            document.getElementById('upload').click();
+          }
+        }
+
+        // File upload handling
+        function handleFiles(elem) {
+              var file = event.target.files[0];
+              var fileReader = new FileReader()
+
+              fileReader.onload = () => {
+                  const view = new DataView(fileReader.result)
+                  blob = new Blob([view], { type: 'audio/wav' })
+                  document.getElementById("player_rec").src = URL.createObjectURL(file);
+                  document.getElementById("player_rec").load();
+                  format = 'wav';
+                  uploadButton.disabled = false;
+                  document.getElementById("player_rec").play();
+              }
+              fileReader.readAsArrayBuffer(file)
+          }
+
+        // Recording handling
+        const handleSuccess = function(stream) {
+          const player_rec = document.getElementById('player_rec');
+          const recPlayButton = document.getElementById('player_rec_button');
+          const uploadButton = document.getElementById('upload');
+          const options = {mimeType: 'audio/webm'};
+          const recordedChunks = [];
+          const mediaRecorder = new MediaRecorder(stream, options);
+          blob = null;
+          format = 'webm';
+
+          mediaRecorder.addEventListener('dataavailable', function(e) {
+              if (e.data.size > 0) recordedChunks.push(e.data);
+          });
+          mediaRecorder.addEventListener('stop', function() {
+              blob = new Blob(recordedChunks);
+              player_rec.src = URL.createObjectURL(blob);
+              player_rec.load();
+              player_rec.play();
+          });
+
+          recPlayButton.addEventListener('click', function() {
+          if (recPlayButton.textContent == 'stop') {
+              mediaRecorder.stop();
+              recPlayButton.textContent = 'start';
+              format = 'webm';
+              uploadButton.disabled = false;
+          }
+          else if (recPlayButton.textContent == 'start') {
+              recordedChunks.splice(0);
+              mediaRecorder.start();
+              recPlayButton.textContent = 'stop';
+              uploadButton.disabled = true;
+          }
+          else {
+              console.log("??");
+          }
+          });
+
+          // Upload button press handling
+          uploadButton.addEventListener('click', function() {
+            if (recPlayButton.textContent == 'stop') {
+              // Recording. Do nothing
+            }
+            else if (recPlayButton.textContent == 'start') {
+                uploadButton.disabled = true;
+                var xhr=new XMLHttpRequest();
+                xhr.onload=function(e) {
+                    if(this.readyState === 4) {
+                        console.log("Server returned: ", e.target.responseText);
+                        recordedChunks.splice(0);
+                        recPlayButton.disabled = false;
+                    }
+                };
+                var fd=new FormData();
+                var text = document.getElementById("text").value
+                if (text == "") {
+                  alert("Text can not be empty!");
+                }
+                fd.append("audio_data", blob);
+                fd.append("format", format);
+                fd.append("text", text);
+                xhr.open("POST", "__TARGET_URL__", true);
+                xhr.send(fd);
+                console.log("sent!");
+                player_rec.src = null;
+                document.getElementById("text").value = "";
+            }
+            else {console.log("??")}
+          });
+        };
+
+        navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+            .then(handleSuccess);
+    </script>
+  </body>
+</html>
