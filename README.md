@@ -2,6 +2,11 @@
 
 ![demo](demo.gif)
 
-The goal of this repository is to provide a sample of bare minimum tool for making text-speech parallel data.
+## Usage
 
-Motivation of the author was to provide a tool that acheives its goal straight-forward, at the cost of scalability.
+```bash
+$ git clone git@github.com:studentofkyoto/min-speech-text.git
+$ cd min-speech-text
+$ pip install -r requirements.txt
+$ python app.py
+```

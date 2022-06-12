@@ -46,7 +46,7 @@
           } else {
             uploadButton.disabled = true;
           }
-          if(event.key === 'Enter') {
+          if(event.key === 'Enter' && event.shiftKey) {
             document.getElementById('upload').click();
           }
         }
